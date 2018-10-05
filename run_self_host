@@ -1,0 +1,14 @@
+#!/usr/bin/env ruby
+
+Dir.glob('test*.rb').sort.each do |f|
+  correct = `ruby -r ./fizzbuzz #{f}`
+  answer = `ruby interp.rb interp.rb interp.rb #{f}`
+
+  if correct == answer
+    puts "#{f} OK"
+  else
+    puts "#{f} NG"
+    warn answer
+    exit
+  end
+end

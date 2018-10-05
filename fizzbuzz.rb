@@ -9,5 +9,5 @@ def fizzbuzz(n)
     else
       i
     end
-  end.join("\n")
+  end.join
 end
