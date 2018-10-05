@@ -13,19 +13,27 @@ def evaluate(exp, env)
 
   when "lit"
     exp[1] # return the immediate value as is
-
   when "+"
     evaluate(exp[1], env) + evaluate(exp[2], env)
   when "-"
     # Subtraction.  Please fill in.
     # Use the code above for addition as a reference.
     # (Almost just copy-and-paste.  This is an exercise.)
-    raise(NotImplementedError) # Problem 1
+    evaluate(exp[1], env) - evaluate(exp[2], env)
   when "*"
-    raise(NotImplementedError) # Problem 1
-  # ... Implement other operators that you need
+    evaluate(exp[1], env) * evaluate(exp[2], env)
+  when "/"
+    evaluate(exp[1], env) / evaluate(exp[2], env)
+  when "%"
+    evaluate(exp[1], env) % evaluate(exp[2], env)
+  when ">"
+    evaluate(exp[1], env) > evaluate(exp[2], env)
+  when "<"
+    evaluate(exp[1], env) < evaluate(exp[2], env)
+  when "=="
+    evaluate(exp[1], env) == evaluate(exp[2], env)
 
-  
+
 #
 ## Problem 2: Statements and variables
 #
@@ -35,7 +43,9 @@ def evaluate(exp, env)
     #
     # Advice 1: Insert `pp(exp)` and observe the AST first.
     # Advice 2: Apply `evaluate` to each child of this node.
-    raise(NotImplementedError) # Problem 2
+    exp[1..-1].each do |_exp|
+      evaluate(_exp, env)
+    end
 
   # The second argument of this method, `env`, is an "environement" that
   # keeps track of the values stored to variables.
@@ -46,13 +56,13 @@ def evaluate(exp, env)
     # Variable reference: lookup the value corresponded to the variable
     #
     # Advice: env[???]
-    raise(NotImplementedError) # Problem 2
+    env[exp[1]]
 
   when "var_assign"
     # Variable assignment: store (or overwrite) the value to the environment
     #
     # Advice: env[???] = ???
-    raise(NotImplementedError) # Problem 2
+    env[exp[1]] = evaluate(exp[2], env)
 
 
 #
@@ -69,11 +79,17 @@ def evaluate(exp, env)
     #   else
     #     ???
     #   end
-    raise(NotImplementedError) # Problem 3
+    if evaluate(exp[1], env)
+      evaluate(exp[2], env)
+    else
+      evaluate(exp[3], env)
+    end
 
   when "while"
     # Loop.
-    raise(NotImplementedError) # Problem 3
+    while evaluate(exp[1], env)
+      evaluate(exp[2], env)
+    end
 
 
 #
@@ -93,6 +109,20 @@ def evaluate(exp, env)
         # MinRuby's `p` method is implemented by Ruby's `p` method.
         p(evaluate(exp[2], env))
       # ... Problem 4
+      when "Integer"
+        Integer(evaluate(exp[2], env))
+      when "fizzbuzz"
+        (1..evaluate(exp[2], env)).map do |i|
+          if i % 15 == 0
+            "FizzBuzz"
+          elsif i % 3 == 0
+            "Fizz"
+          elsif i % 5 == 0
+            "Buzz"
+          else
+            i
+          end
+        end.join("\n")
       else
         raise("unknown builtin function")
       end
@@ -120,7 +150,15 @@ def evaluate(exp, env)
       # (*1) formal parameter: a variable as found in the function definition.
       # For example, `a`, `b`, and `c` are the formal parameters of
       # `def foo(a, b, c)`.
-      raise(NotImplementedError) # Problem 5
+      _env = {}
+      i = 0
+      args, body = $function_definitions[exp[1]]
+      while i < args.size
+        _env[args[i]] = evaluate(exp[i+2], env)
+        i = i + 1
+      end
+
+      evaluate(body, _env)
     end
 
   when "func_def"
@@ -132,7 +170,7 @@ def evaluate(exp, env)
     # All you need is store them into $function_definitions.
     #
     # Advice: $function_definitions[???] = ???
-    raise(NotImplementedError) # Problem 5
+    $function_definitions[exp[1]] = [exp[2], exp[3]]
 
 
 #
@@ -141,21 +179,33 @@ def evaluate(exp, env)
 
   # You don't need advices anymore, do you?
   when "ary_new"
-    raise(NotImplementedError) # Problem 6
+    i = 0
+    arr = []
+    while i < exp.size - 1
+      arr[i] = evaluate(exp[i+1], env)
+      i = i + 1
+    end
+    arr
 
   when "ary_ref"
-    raise(NotImplementedError) # Problem 6
+    evaluate(exp[1], env)[evaluate(exp[2], env)]
 
   when "ary_assign"
-    raise(NotImplementedError) # Problem 6
+    evaluate(exp[1], env)[evaluate(exp[2], env)] = evaluate(exp[3], env)
 
   when "hash_new"
-    raise(NotImplementedError) # Problem 6
+    i = 0
+    hash = {}
+    while i < exp.size - 1
+      hash[evaluate(exp[i+1], env)] = evaluate(exp[i+2], env)
+      i = i + 2
+    end
+    hash
 
   else
     p("error")
-    pp(exp)
-    raise("unknown node")
+    pp exp
+    raise("unknown node: #{exp[0]}")
   end
 end
 
@@ -165,4 +215,10 @@ env = {}
 
 # `minruby_load()` == `File.read(ARGV.shift)`
 # `minruby_parse(str)` parses a program text given, and returns its AST
-evaluate(minruby_parse(minruby_load()), env)
+exp = minruby_parse(minruby_load())
+begin
+  evaluate(exp, env)
+rescue Exception => err
+  pp exp
+  raise err
+end
